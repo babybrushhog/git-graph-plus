@@ -9,6 +9,7 @@
   import { requestDirtyState } from '../../lib/utils/dirty-check';
   import { resolveGraphColor } from '../../lib/utils/graph-color';
   import { graphColorsStore } from '../../lib/stores/graph-colors.svelte';
+  import { customActionsStore } from '../../lib/stores/custom-actions.svelte';
   import ContextMenu from '../common/ContextMenu.svelte';
   import InteractiveRebase from '../rebase/InteractiveRebase.svelte';
   import PullAfterCheckoutModal from '../modals/PullAfterCheckoutModal.svelte';
@@ -1193,6 +1194,29 @@
       { label: t('graph.copyCommitInfo'), action: () => vscode.postMessage({ type: 'copyToClipboard', payload: { text: `${commit.abbreviatedHash} - ${commit.subject}` } }) },
     );
     groups.push(copyGroup);
+
+    // ── Custom actions ──
+    // User-defined shell commands from `gitGraphPlus.customActions`. The command
+    // lines live in the extension; we only send which one to run and the commit it
+    // was invoked on.
+    if (customActionsStore.actions.length > 0) {
+      groups.push(customActionsStore.actions.map((custom, index) => ({
+        label: custom.title,
+        action: () => vscode.postMessage({
+          type: 'runCustomAction',
+          payload: {
+            index,
+            hash: commit.hash,
+            shortHash: commit.abbreviatedHash,
+            subject: commit.subject,
+            author: commit.author.name,
+            authorEmail: commit.author.email,
+            date: commit.author.date,
+            branch: branchStore.currentBranch?.name ?? '',
+          },
+        }),
+      })));
+    }
 
     // Flatten groups with separators between them, preceded by a separator if there were refs
     if (refs.length > 0) items.push(sep);

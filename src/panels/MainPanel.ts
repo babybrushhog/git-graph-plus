@@ -22,6 +22,12 @@ import {
   assertSafeArgPath as assertSafeArgPathUtil,
 } from '../utils/path-validation';
 import { SequenceGuard } from '../utils/sequence-guard';
+import {
+  readCustomActions,
+  substituteCustomAction,
+  customActionEnv,
+  type CustomActionContext,
+} from '../services/custom-actions';
 import { resolveDefaultWorktreePath } from '../utils/worktree-path';
 
 export class MainPanel {
@@ -180,6 +186,47 @@ export class MainPanel {
     return resolveCommitLinkRules(custom, autoDetect, remoteUrl);
   }
 
+  // Only the labels go to the webview; the command lines stay on this side so a
+  // compromised webview cannot invent one. The webview runs an action by index.
+  private postCustomActions(): void {
+    const actions = readCustomActions().map(a => ({ title: a.title, confirm: a.confirm }));
+    this.post({ type: 'setCustomActions', payload: { actions } });
+  }
+
+  // One shared terminal keeps the panel list tidy across repeated runs. It is
+  // recreated when the user closes it.
+  private customActionTerminal: vscode.Terminal | undefined;
+
+  private async runCustomAction(
+    index: number,
+    ctx: CustomActionContext,
+  ): Promise<void> {
+    const action = readCustomActions()[index];
+    if (!action) {
+      vscode.window.showWarningMessage('Git Graph Plus: that custom action no longer exists.');
+      return;
+    }
+    if (action.confirm) {
+      const run = 'Run';
+      const choice = await vscode.window.showWarningMessage(
+        `Run "${action.title}" on ${ctx.SHORT_HASH}?`,
+        { modal: true },
+        run,
+      );
+      if (choice !== run) return;
+    }
+    const command = substituteCustomAction(action.command, ctx);
+    if (!this.customActionTerminal || this.customActionTerminal.exitStatus !== undefined) {
+      this.customActionTerminal = vscode.window.createTerminal({
+        name: 'Git Graph Plus',
+        cwd: this.repoPath,
+        env: customActionEnv(ctx),
+      });
+    }
+    this.customActionTerminal.show(true);
+    this.customActionTerminal.sendText(command);
+  }
+
   private async postCommitLinkRules(): Promise<void> {
     const rules = await this.getCommitLinkRules();
     this.post({ type: 'setCommitLinkRules', payload: { rules } });
@@ -238,6 +285,9 @@ export class MainPanel {
         ) {
           void this.postCommitLinkRules();
         }
+        if (e.affectsConfiguration('gitGraphPlus.customActions')) {
+          this.postCustomActions();
+        }
         if (e.affectsConfiguration('gitGraphPlus.timeout')) {
           this.gitService.setDefaultTimeout(readTimeoutMs());
         }
@@ -257,6 +307,7 @@ export class MainPanel {
     this.post({ type: 'setLoadMoreCount', payload: { count: readLoadMoreCommitCount() } });
     this.post({ type: 'setInteractiveRebaseMode', payload: { mode: readInteractiveRebaseMode() } });
     void this.postCommitLinkRules();
+    this.postCustomActions();
 
     this.panel.webview.onDidReceiveMessage(
       (message: WebviewMessage) => this.handleMessage(message),
@@ -1245,6 +1296,20 @@ export class MainPanel {
           this.post({
             type: 'statsData',
             payload: { byAuthor, byWeekdayHour },
+          });
+          break;
+        }
+        case 'runCustomAction': {
+          const p = message.payload;
+          await this.runCustomAction(p.index, {
+            COMMIT_HASH: p.hash,
+            SHORT_HASH: p.shortHash,
+            SUBJECT: p.subject,
+            AUTHOR: p.author,
+            AUTHOR_EMAIL: p.authorEmail,
+            DATE: p.date,
+            BRANCH: p.branch,
+            REPO: this.repoPath,
           });
           break;
         }
