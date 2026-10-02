@@ -830,6 +830,42 @@
         label: t('graph.cherryPickCommits', { count: String(sel.length) }),
         action: () => { multiCherryPickTargets = orderedOldestFirst; },
       });
+      // ── Custom actions (two-commit range) ──
+      // Actions marked `range` operate on a span, so they only make sense with
+      // exactly two commits selected: the oldest is the base, the newest the target.
+      if (sel.length === 2) {
+        const rangeActions = customActionsStore.actions
+          .map((custom, index) => ({ custom, index }))
+          .filter(entry => entry.custom.range);
+        if (rangeActions.length > 0) {
+          const baseHash = orderedOldestFirst[0];
+          const targetHash = orderedOldestFirst[orderedOldestFirst.length - 1];
+          const base = displayCommits.find(c => c.hash === baseHash);
+          const target = displayCommits.find(c => c.hash === targetHash);
+          multiItems.push({ separator: true, label: '', action: () => {} });
+          for (const { custom, index } of rangeActions) {
+            multiItems.push({
+              label: custom.title,
+              action: () => vscode.postMessage({
+                type: 'runCustomAction',
+                payload: {
+                  index,
+                  hash: targetHash,
+                  shortHash: target?.abbreviatedHash ?? targetHash.slice(0, 7),
+                  subject: target?.subject ?? '',
+                  author: target?.author.name ?? '',
+                  authorEmail: target?.author.email ?? '',
+                  date: target?.author.date ?? '',
+                  branch: branchStore.currentBranch?.name ?? '',
+                  baseHash,
+                  baseShortHash: base?.abbreviatedHash ?? baseHash.slice(0, 7),
+                },
+              }),
+            });
+          }
+        }
+      }
+
       multiItems.push({ separator: true, label: '', action: () => {} });
       multiItems.push({
         label: t('graph.cancelSelection'),
@@ -1199,8 +1235,13 @@
     // User-defined shell commands from `gitGraphPlus.customActions`. The command
     // lines live in the extension; we only send which one to run and the commit it
     // was invoked on.
-    if (customActionsStore.actions.length > 0) {
-      groups.push(customActionsStore.actions.map((custom, index) => ({
+    // `index` must stay the position in the user's setting — the extension looks
+    // the command up by it — so filter after pairing each action with its index.
+    const singleActions = customActionsStore.actions
+      .map((custom, index) => ({ custom, index }))
+      .filter(entry => !entry.custom.range);
+    if (singleActions.length > 0) {
+      groups.push(singleActions.map(({ custom, index }) => ({
         label: custom.title,
         action: () => vscode.postMessage({
           type: 'runCustomAction',

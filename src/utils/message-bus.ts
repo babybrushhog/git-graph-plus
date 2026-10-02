@@ -108,7 +108,7 @@ export type WebviewMessage =
   | { type: 'pushAllTags'; payload: { remote?: string } }
   | { type: 'deleteRemoteTag'; payload: { name: string; remote?: string } }
   | { type: 'copyToClipboard'; payload: { text: string } }
-  | { type: 'runCustomAction'; payload: { index: number; hash: string; shortHash: string; subject: string; author: string; authorEmail: string; date: string; branch: string } }
+  | { type: 'runCustomAction'; payload: { index: number; hash: string; shortHash: string; subject: string; author: string; authorEmail: string; date: string; branch: string; baseHash?: string; baseShortHash?: string } }
   | { type: 'saveCommitPatch'; payload: { hash: string; paths?: string[] } }
   | { type: 'restoreStashFiles'; payload: { index: number; paths: string[] } }
   | { type: 'compareToWorking'; payload: { hash: string } }
@@ -162,7 +162,7 @@ export type ExtensionMessage =
   | { type: 'setBadgeBarThickness'; payload: { width: number } }
   | { type: 'setGraphColors'; payload: { colors: string[] } }
   | { type: 'setCommitLinkRules'; payload: { rules: LinkRule[] } }
-  | { type: 'setCustomActions'; payload: { actions: Array<{ title: string; confirm?: boolean }> } }
+  | { type: 'setCustomActions'; payload: { actions: Array<{ title: string; confirm?: boolean; range?: boolean }> } }
   | { type: 'repoList'; payload: { repos: Array<{ path: string; name: string; type: 'root' | 'submodule' | 'nested' }>; active: string } }
   | { type: 'worktreeData'; payload: WorktreeInfo[] }
   | { type: 'uncommittedDiffData'; payload: { staged: Array<{ path: string; status: string }>; unstaged: Array<{ path: string; status: string }> } }

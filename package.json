@@ -715,7 +715,7 @@
         "gitGraphPlus.customActions": {
           "type": "array",
           "default": [],
-          "markdownDescription": "Commands to add to the commit context menu. Each entry needs a `title` and a `command`; set `confirm` to ask before running. The command runs in the integrated terminal with the repository as the working directory.\n\nPlaceholders are substituted **shell-quoted**: `{COMMIT_HASH}`, `{SHORT_HASH}`, `{SUBJECT}`, `{AUTHOR}`, `{AUTHOR_EMAIL}`, `{DATE}`, `{BRANCH}`, `{REPO}`. The same values are also exported as `GGP_COMMIT_HASH`, `GGP_SUBJECT`, … for commands that need the raw text inside their own quoting.",
+          "markdownDescription": "Commands to add to the commit context menu. Each entry needs a `title` and a `command`; set `confirm` to ask before running, and `range` for an action that works on two selected commits. The command runs in the integrated terminal with the repository as the working directory.\n\nPlaceholders are substituted **shell-quoted**: `{COMMIT_HASH}`, `{SHORT_HASH}`, `{BASE_HASH}`, `{BASE_SHORT_HASH}`, `{SUBJECT}`, `{AUTHOR}`, `{AUTHOR_EMAIL}`, `{DATE}`, `{BRANCH}`, `{REPO}`. `{BASE_HASH}` is empty unless the action is a `range` one. The same values are also exported as `GGP_COMMIT_HASH`, `GGP_BASE_HASH`, … for commands that need the raw text inside their own quoting.",
           "items": {
             "type": "object",
             "required": [
@@ -735,6 +735,11 @@
                 "type": "boolean",
                 "default": false,
                 "description": "Ask before running."
+              },
+              "range": {
+                "type": "boolean",
+                "default": false,
+                "description": "Offer this action only while exactly two commits are selected. {BASE_HASH} is then the older end and {COMMIT_HASH} the newer one."
               }
             },
             "additionalProperties": false

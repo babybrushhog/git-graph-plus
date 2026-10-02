@@ -189,7 +189,8 @@ export class MainPanel {
   // Only the labels go to the webview; the command lines stay on this side so a
   // compromised webview cannot invent one. The webview runs an action by index.
   private postCustomActions(): void {
-    const actions = readCustomActions().map(a => ({ title: a.title, confirm: a.confirm }));
+    const actions = readCustomActions()
+      .map(a => ({ title: a.title, confirm: a.confirm, range: a.range }));
     this.post({ type: 'setCustomActions', payload: { actions } });
   }
 
@@ -1307,6 +1308,8 @@ export class MainPanel {
           await this.runCustomAction(p.index, {
             COMMIT_HASH: p.hash,
             SHORT_HASH: p.shortHash,
+            BASE_HASH: p.baseHash ?? '',
+            BASE_SHORT_HASH: p.baseShortHash ?? '',
             SUBJECT: p.subject,
             AUTHOR: p.author,
             AUTHOR_EMAIL: p.authorEmail,

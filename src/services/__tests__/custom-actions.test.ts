@@ -23,6 +23,8 @@ import {
 const ctx: CustomActionContext = {
   COMMIT_HASH: 'a1b2c3d4e5f6',
   SHORT_HASH: 'a1b2c3d',
+  BASE_HASH: '9f8e7d6c5b4a',
+  BASE_SHORT_HASH: '9f8e7d6',
   SUBJECT: "fix: don't crash",
   AUTHOR: 'Daisuke Nakayama',
   AUTHOR_EMAIL: 'dev@example.com',
@@ -42,14 +44,19 @@ describe('readCustomActions', () => {
     expect(readCustomActions()).toEqual([]);
   });
 
+  it('keeps the range flag for actions that span two commits', () => {
+    h.value = [{ title: 'Range', command: 'git export-diff {BASE_HASH} {COMMIT_HASH}', range: true }];
+    expect(readCustomActions()[0].range).toBe(true);
+  });
+
   it('keeps well-formed entries and normalizes confirm to a boolean', () => {
     h.value = [
       { title: 'Export', command: 'git export-diff {COMMIT_HASH}' },
       { title: 'Deploy', command: 'deploy.sh', confirm: true },
     ];
     expect(readCustomActions()).toEqual([
-      { title: 'Export', command: 'git export-diff {COMMIT_HASH}', confirm: false },
-      { title: 'Deploy', command: 'deploy.sh', confirm: true },
+      { title: 'Export', command: 'git export-diff {COMMIT_HASH}', confirm: false, range: false },
+      { title: 'Deploy', command: 'deploy.sh', confirm: true, range: false },
     ]);
   });
 
@@ -61,7 +68,9 @@ describe('readCustomActions', () => {
       { title: 'No command' },
       { title: 'Good', command: 'echo ok' },
     ];
-    expect(readCustomActions()).toEqual([{ title: 'Good', command: 'echo ok', confirm: false }]);
+    expect(readCustomActions()).toEqual([
+      { title: 'Good', command: 'echo ok', confirm: false, range: false },
+    ]);
   });
 });
 
@@ -76,6 +85,11 @@ describe('substituteCustomAction', () => {
     // Without escaping, `don't` would close the quote and run `t crash` as shell.
     const out = substituteCustomAction('echo {SUBJECT}', ctx);
     expect(out).toBe(`echo 'fix: don'\\''t crash'`);
+  });
+
+  it('substitutes the older end of a two-commit selection', () => {
+    expect(substituteCustomAction('git export-diff {BASE_HASH} {COMMIT_HASH}', ctx))
+      .toBe("git export-diff '9f8e7d6c5b4a' 'a1b2c3d4e5f6'");
   });
 
   it('leaves unknown placeholders untouched', () => {

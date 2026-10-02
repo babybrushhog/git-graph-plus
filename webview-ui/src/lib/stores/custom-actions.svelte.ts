@@ -2,6 +2,8 @@
 export interface CustomAction {
   title: string;
   confirm?: boolean;
+  /** Offered only while two commits are selected (diff between them). */
+  range?: boolean;
 }
 
 /**

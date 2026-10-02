@@ -12,12 +12,22 @@ export interface CustomAction {
   command: string;
   /** Ask for confirmation before running. */
   confirm?: boolean;
+  /**
+   * When true the action is offered only while exactly two commits are
+   * selected, and `{BASE_HASH}` / `{COMMIT_HASH}` hold the older and newer
+   * end of the selection. When false (the default) it is offered on a single
+   * commit and `{BASE_HASH}` is empty.
+   */
+  range?: boolean;
 }
 
 /** Values a custom action can reference, keyed by placeholder name. */
 export interface CustomActionContext {
   COMMIT_HASH: string;
   SHORT_HASH: string;
+  /** Older end of a two-commit selection; empty for single-commit actions. */
+  BASE_HASH: string;
+  BASE_SHORT_HASH: string;
   SUBJECT: string;
   AUTHOR: string;
   AUTHOR_EMAIL: string;
@@ -37,10 +47,10 @@ export function readCustomActions(): CustomAction[] {
   const actions: CustomAction[] = [];
   for (const entry of raw) {
     if (!entry || typeof entry !== 'object') continue;
-    const { title, command, confirm } = entry as Record<string, unknown>;
+    const { title, command, confirm, range } = entry as Record<string, unknown>;
     if (typeof title !== 'string' || !title.trim()) continue;
     if (typeof command !== 'string' || !command.trim()) continue;
-    actions.push({ title, command, confirm: confirm === true });
+    actions.push({ title, command, confirm: confirm === true, range: range === true });
   }
   return actions;
 }
