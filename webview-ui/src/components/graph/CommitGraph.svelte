@@ -1424,6 +1424,8 @@
     <!-- Author / hash / date cells, shared by the in-row meta (normal mode) and the
          pinned overlay (horizontal-scroll mode). -->
     {#snippet metaCells(commit: typeof displayCommits[0])}
+      <div class="col-hash" use:tooltip={commit.hash !== 'UNCOMMITTED' ? commit.hash : ''}>{commit.hash !== 'UNCOMMITTED' ? commit.abbreviatedHash : ''}</div>
+      <div class="col-date" use:tooltip={commit.hash !== 'UNCOMMITTED' ? new Date(commit.author.date).toLocaleString() : ''}>{commit.hash !== 'UNCOMMITTED' ? formatDate(commit.author.date) : ''}</div>
       <div class="col-author">
         {#if commit.hash !== 'UNCOMMITTED'}
           <span class="author-id" use:tooltip={commit.author.name}>
@@ -1438,17 +1440,15 @@
           {/if}
         {/if}
       </div>
-      <div class="col-hash" use:tooltip={commit.hash !== 'UNCOMMITTED' ? commit.hash : ''}>{commit.hash !== 'UNCOMMITTED' ? commit.abbreviatedHash : ''}</div>
-      <div class="col-date" use:tooltip={commit.hash !== 'UNCOMMITTED' ? new Date(commit.author.date).toLocaleString() : ''}>{commit.hash !== 'UNCOMMITTED' ? formatDate(commit.author.date) : ''}</div>
     {/snippet}
 
     <!-- Column headers -->
     <div class="graph-header" style={contentWidth ? `width: ${contentWidth}px;` : ''}>
       <div class="col-message">{t('graph.description')}</div>
       <div class="col-meta">
-        <div class="col-author">{t('graph.author')}</div>
         <div class="col-hash">{t('graph.sha')}</div>
         <div class="col-date">{t('graph.date')}</div>
+        <div class="col-author">{t('graph.author')}</div>
       </div>
     </div>
 
