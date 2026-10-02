@@ -25,7 +25,7 @@ import { SequenceGuard } from '../utils/sequence-guard';
 import {
   readCustomActions,
   substituteCustomAction,
-  customActionEnv,
+  customActionExportLine,
   type CustomActionContext,
 } from '../services/custom-actions';
 import { resolveDefaultWorktreePath } from '../utils/worktree-path';
@@ -220,10 +220,13 @@ export class MainPanel {
       this.customActionTerminal = vscode.window.createTerminal({
         name: 'Git Graph Plus',
         cwd: this.repoPath,
-        env: customActionEnv(ctx),
       });
     }
     this.customActionTerminal.show(true);
+    // The GGP_* values must match the commit that was just clicked. Passing them
+    // as TerminalOptions.env would freeze them at the terminal's first run, so
+    // export them each time instead (harmless noise in shells without `export`).
+    this.customActionTerminal.sendText(customActionExportLine(ctx));
     this.customActionTerminal.sendText(command);
   }
 

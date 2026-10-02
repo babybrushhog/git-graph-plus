@@ -16,7 +16,7 @@ vi.mock('vscode', () => ({
 import {
   readCustomActions,
   substituteCustomAction,
-  customActionEnv,
+  customActionExportLine,
   type CustomActionContext,
 } from '../custom-actions';
 
@@ -87,11 +87,13 @@ describe('substituteCustomAction', () => {
   });
 });
 
-describe('customActionEnv', () => {
-  it('exports each value under a GGP_ prefix for commands that need raw text', () => {
-    const env = customActionEnv(ctx);
-    expect(env.GGP_COMMIT_HASH).toBe('a1b2c3d4e5f6');
-    expect(env.GGP_SUBJECT).toBe("fix: don't crash");
-    expect(env.GGP_BRANCH).toBe('main');
+describe('customActionExportLine', () => {
+  it('exports each value under a GGP_ prefix, shell-quoted', () => {
+    const line = customActionExportLine(ctx);
+    expect(line.startsWith('export ')).toBe(true);
+    expect(line).toContain("GGP_COMMIT_HASH='a1b2c3d4e5f6'");
+    expect(line).toContain("GGP_BRANCH='main'");
+    // A subject with a quote must not be able to end the assignment.
+    expect(line).toContain(`GGP_SUBJECT='fix: don'\\''t crash'`);
   });
 });

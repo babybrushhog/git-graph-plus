@@ -65,9 +65,17 @@ export function substituteCustomAction(command: string, ctx: CustomActionContext
   });
 }
 
-/** Environment variables exposed to a custom action's shell. */
-export function customActionEnv(ctx: CustomActionContext): Record<string, string> {
-  const env: Record<string, string> = {};
-  for (const [key, value] of Object.entries(ctx)) env[`GGP_${key}`] = value ?? '';
-  return env;
+/**
+ * Builds the `export GGP_...` line sent before a custom action's command, so a
+ * command can read the raw (unquoted) values inside its own quoting.
+ *
+ * This is sent per run rather than passed as the terminal's `env`, because a
+ * reused terminal would otherwise keep the values of the commit it was first
+ * created for.
+ */
+export function customActionExportLine(ctx: CustomActionContext): string {
+  const assignments = Object.entries(ctx)
+    .map(([key, value]) => `GGP_${key}=${shellQuote(value ?? '')}`)
+    .join(' ');
+  return `export ${assignments}`;
 }
