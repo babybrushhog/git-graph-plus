@@ -744,6 +744,19 @@
             },
             "additionalProperties": false
           }
+        },
+        "gitGraphPlus.defaults.diffMode": {
+          "type": "string",
+          "enum": [
+            "sideBySide",
+            "inline"
+          ],
+          "enumDescriptions": [
+            "Two columns: old on the left, new on the right.",
+            "One column with +/- lines."
+          ],
+          "default": "sideBySide",
+          "description": "Layout the diff panel opens with. The toggle in the panel still applies for the rest of the session."
         }
       }
     }

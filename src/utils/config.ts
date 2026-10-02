@@ -37,6 +37,21 @@ export function readLoadMoreCommitCount(): number {
   return readPositiveIntSetting('loadMoreCommitCount', DEFAULT_LOAD_MORE_COMMIT_COUNT);
 }
 
+/** Layout of the diff panel: one column with +/- lines, or two columns. */
+export type DiffMode = 'inline' | 'side-by-side';
+
+/**
+ * Reads `gitGraphPlus.defaults.diffMode` — whether the diff panel opens
+ * side by side (default) or inline. The toggle in the panel still wins for the
+ * rest of the session; this is only the starting point.
+ */
+export function readDiffMode(): DiffMode {
+  const raw = vscode.workspace
+    .getConfiguration('gitGraphPlus')
+    .get<string>('defaults.diffMode', 'sideBySide');
+  return raw === 'inline' ? 'inline' : 'side-by-side';
+}
+
 /**
  * Reads `gitGraphPlus.interactiveRebase.mode` — whether interactive rebase
  * opens the GUI editor (`ui`, default) or runs classic `git rebase -i` in the

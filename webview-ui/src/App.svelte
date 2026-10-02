@@ -40,6 +40,7 @@ import AmendModal from './components/modals/AmendModal.svelte';
   import { graphColorsStore } from './lib/stores/graph-colors.svelte';
   import { commitLinkRulesStore } from './lib/stores/commit-link-rules.svelte';
   import { customActionsStore } from './lib/stores/custom-actions.svelte';
+  import { diffModeStore } from './lib/stores/diff-mode.svelte';
   import { avatarStore } from './lib/stores/avatars.svelte';
   import SetUpstreamModal from './components/modals/SetUpstreamModal.svelte';
   import FlowInitModal from './components/modals/FlowInitModal.svelte';
@@ -127,6 +128,9 @@ import AmendModal from './components/modals/AmendModal.svelte';
           break;
         case 'setCustomActions':
           customActionsStore.set(msg.payload.actions);
+          break;
+        case 'setDiffMode':
+          diffModeStore.set(msg.payload.mode);
           break;
         case 'avatarData':
           avatarStore.receive(msg.payload.email, msg.payload.size, msg.payload.dataUri);

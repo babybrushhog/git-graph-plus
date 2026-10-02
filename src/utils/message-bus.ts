@@ -157,6 +157,7 @@ export type ExtensionMessage =
   | { type: 'tagDetailsData'; payload: { name: string; hash: string; message?: string; isAnnotated: boolean } }
   | { type: 'setLocale'; payload: { locale: string; homeDir?: string } }
   | { type: 'setInteractiveRebaseMode'; payload: { mode: 'ui' | 'classic' } }
+  | { type: 'setDiffMode'; payload: { mode: 'inline' | 'side-by-side' } }
   | { type: 'setDefaults'; payload: ModalDefaults }
   | { type: 'setLoadMoreCount'; payload: { count: number } }
   | { type: 'setBadgeBarThickness'; payload: { width: number } }

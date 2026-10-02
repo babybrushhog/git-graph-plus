@@ -3,6 +3,7 @@ import { render, cleanup, fireEvent } from '@testing-library/svelte';
 import FileDiffView from '../FileDiffView.svelte';
 import { i18n } from '../../../lib/i18n/index.svelte';
 import type { DiffData } from '../../../lib/types';
+import { diffModeStore } from '../../../lib/stores/diff-mode.svelte';
 
 // One hunk holding two separate change blocks split by a context line. The whole
 // hunk is the reverse unit now, so the clicked line only identifies its hunk.
@@ -66,7 +67,13 @@ function rightClick(el: Element): MouseEvent {
   return ev;
 }
 
-beforeEach(() => i18n.setLocale('en'));
+beforeEach(() => {
+  i18n.setLocale('en');
+  // These cases assert the one-column rendering, so pin the shared layout store
+  // to inline. The panel now opens side by side by default
+  // (`gitGraphPlus.defaults.diffMode`), and the store survives between renders.
+  diffModeStore.set('inline');
+});
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();

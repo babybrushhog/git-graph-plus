@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { diffModeStore } from '../../lib/stores/diff-mode.svelte';
   import type { DiffData } from '../../lib/types';
   import { onMount } from 'svelte';
   import { t } from '../../lib/i18n/index.svelte';
@@ -229,7 +230,10 @@
     lineSel = null;
   });
 
-  let diffMode = $state<'inline' | 'side-by-side'>('inline');
+  // Shared across files and seeded from `gitGraphPlus.defaults.diffMode`: this
+  // component is re-created on every file click, so local state would reset the
+  // layout each time.
+  let diffMode = $derived(diffModeStore.mode);
 
   let totalDiffLines = $derived(
     diff && !diff.isBinary
@@ -356,11 +360,11 @@
       <div class="diff-mode-toggle">
         <button
           class:active={diffMode === 'inline'}
-          onclick={() => { diffMode = 'inline'; lineSel = null; }}
+          onclick={() => { diffModeStore.set('inline'); lineSel = null; }}
         >{t('details.inline')}</button>
         <button
           class:active={diffMode === 'side-by-side'}
-          onclick={() => { diffMode = 'side-by-side'; lineSel = null; }}
+          onclick={() => { diffModeStore.set('side-by-side'); lineSel = null; }}
         >{t('details.sideBySide')}</button>
       </div>
     </div>

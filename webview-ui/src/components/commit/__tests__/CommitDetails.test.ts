@@ -6,6 +6,7 @@ import { commitStore } from '../../../lib/stores/commits.svelte';
 import { uiStore } from '../../../lib/stores/ui.svelte';
 import { modalStore } from '../../../lib/stores/modals.svelte';
 import type { Commit, DiffData } from '../../../lib/types';
+import { diffModeStore } from '../../../lib/stores/diff-mode.svelte';
 
 function commit(over: Partial<Commit> = {}): Commit {
   return {
@@ -53,6 +54,10 @@ function deliverSignature(hash: string, signature: { status: 'good' | 'none' | '
 
 beforeEach(() => {
   i18n.setLocale('en');
+  // Most cases here assert the one-column rendering. The panel now opens side by
+  // side by default and the layout store persists between renders, so pin it.
+  // The two cases about the default set it themselves.
+  diffModeStore.set('inline');
   globalThis.__postedMessages = [];
   commitStore.commits = [];
   uiStore.selectedCommitHash = null;
@@ -514,7 +519,16 @@ describe('CommitDetails — diff mode toggle', () => {
     return r;
   }
 
-  it('default mode is inline', async () => {
+  it('opens side by side by default (gitGraphPlus.defaults.diffMode)', async () => {
+    diffModeStore.set('side-by-side');
+    const { container } = await setupWithDiff();
+    const btns = container.querySelectorAll<HTMLButtonElement>('.diff-mode-toggle button');
+    expect(btns[1].classList.contains('active')).toBe(true);
+    expect(container.querySelector('.diff-sbs')).not.toBeNull();
+  });
+
+  it('opens inline when the setting says so', async () => {
+    diffModeStore.set('inline');
     const { container } = await setupWithDiff();
     const btns = container.querySelectorAll<HTMLButtonElement>('.diff-mode-toggle button');
     expect(btns[0].classList.contains('active')).toBe(true);
