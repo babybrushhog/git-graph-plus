@@ -183,7 +183,6 @@
   let resizeStartX = 0;
   let resizeStartWidth = 0;
   // svelte-ignore state_referenced_locally
-  let activeTab = $state<'commit' | 'changes'>(commit ? 'commit' : 'changes');
   let uncommittedTab = $state<'staged' | 'unstaged'>('staged');
 
   let activeHash = $state('');
@@ -261,7 +260,6 @@
       uncommittedDiffCache = new Map();
       signature = null;
       if (hash === 'UNCOMMITTED') {
-        activeTab = 'changes';
         vscode.postMessage({ type: 'getUncommittedDiff' });
       } else if (hash) {
         vscode.postMessage({ type: 'getCommitDiff', payload: { hash } });
@@ -596,14 +594,13 @@
         Unstaged <span class="tab-count">{uncommittedFiles?.unstaged.length ?? 0}</span>
       </button>
     {:else}
+      <!-- Commit info and the changed files sit side by side, so there is nothing
+           to switch between: the former tabs are plain labels now. The staged /
+           unstaged pair above stays a real toggle — those are two different lists. -->
       {#if commit}
-        <button class="top-tab" class:active={activeTab === 'commit'} onclick={() => { activeTab = 'commit'; }}>
-          {t('details.commit')}
-        </button>
+        <span class="top-label">{t('details.commit')}</span>
       {/if}
-      <button class="top-tab" class:active={activeTab === 'changes'} onclick={() => { activeTab = 'changes'; }}>
-        {t('details.changes')} <span class="tab-count">{files.length}</span>
-      </button>
+      <span class="top-label">{t('details.changes')} <span class="tab-count">{files.length}</span></span>
     {/if}
     <div class="tabs-actions">
       <button class="tab-action-btn" aria-label={uiStore.commitDetailFullscreen ? t('details.restore') : t('details.fullscreen')} use:tooltip={uiStore.commitDetailFullscreen ? t('details.restore') : t('details.fullscreen')} onclick={() => { uiStore.commitDetailFullscreen = !uiStore.commitDetailFullscreen; }}>
@@ -615,8 +612,9 @@
     </div>
   </div>
 
-  <!-- Commit tab -->
-  {#if activeTab === 'commit' && commit}
+  <div class="details-body">
+  <!-- Commit info (left column) -->
+  {#if commit && commit.hash !== 'UNCOMMITTED'}
     <div class="commit-tab-content">
       <div class="info-section">
         <div class="info-columns">
@@ -785,7 +783,9 @@
     </div>
 
   <!-- Changes tab -->
-  {:else if activeTab === 'changes'}
+  {/if}
+
+  <!-- Changed files + diff (right column) -->
     <div class="changes-tab-content">
       <div class="files-panel" style="width: {filesPanelWidth}px">
         <div class="files-list">
@@ -1154,7 +1154,7 @@
       {/if}
     </div>
 
-  {/if}
+  </div>
 </div>
 
 {#if fileContextMenu}
@@ -1258,10 +1258,36 @@
   }
 
   /* ── Commit tab ── */
-  .commit-tab-content {
+  /* Left column: commit metadata and message. Fixed width so the file list and
+     diff keep the rest; it scrolls on its own when the message is long. */
+  .details-body {
     flex: 1;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .commit-tab-content {
+    flex: 0 0 var(--commit-info-width, 320px);
     overflow-y: auto;
     padding: 16px 20px;
+    border-right: 1px solid var(--border-color);
+  }
+
+  /* The two-column info block inside it has no room to sit side by side now. */
+  .commit-tab-content .info-columns {
+    flex-direction: column;
+  }
+
+  /* Former tab labels: same place, no longer clickable. */
+  .top-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
   }
 
   .info-section {
