@@ -7,6 +7,7 @@ import { uiStore } from '../../../lib/stores/ui.svelte';
 import { modalStore } from '../../../lib/stores/modals.svelte';
 import type { Commit, DiffData } from '../../../lib/types';
 import { diffModeStore } from '../../../lib/stores/diff-mode.svelte';
+import { panelWidthsStore } from '../../../lib/stores/panel-widths.svelte';
 
 function commit(over: Partial<Commit> = {}): Commit {
   return {
@@ -58,6 +59,10 @@ beforeEach(() => {
   // side by default and the layout store persists between renders, so pin it.
   // The two cases about the default set it themselves.
   diffModeStore.set('inline');
+  // The column widths are module state shared by every test; reset them so one
+  // drag test cannot shift the next one's starting point.
+  panelWidthsStore.commitInfo = 320;
+  panelWidthsStore.files = 240;
   globalThis.__postedMessages = [];
   commitStore.commits = [];
   uiStore.selectedCommitHash = null;
@@ -805,23 +810,58 @@ describe('CommitDetails — multi-commit sections (3+ mode)', () => {
   });
 });
 
-describe('CommitDetails — resize handle', () => {
-  it('mousedown on resize handle starts a drag, mousemove updates width, mouseup stops', async () => {
+describe('CommitDetails — resize handles', () => {
+  // Two columns are draggable now: the commit info on the left, then the file
+  // list. The handles appear in that order.
+  async function handles(container: HTMLElement) {
+    await waitFor(() => expect(container.querySelectorAll('.resize-handle').length).toBe(2));
+    return Array.from(container.querySelectorAll<HTMLDivElement>('.resize-handle'));
+  }
+
+  it('drag on the files handle widens the file list, and stops at mouseup', async () => {
     const { container } = render(CommitDetails, { commit: commit({ hash: 'h1' }) });
     deliverCommitDiff('h1', [{ path: 'a.ts', status: 'M' }]);
-    await waitFor(() => container.querySelector('.resize-handle'));
-    const handle = container.querySelector<HTMLDivElement>('.resize-handle')!;
+    const [, filesHandle] = await handles(container);
     const filesPanel = container.querySelector<HTMLDivElement>('.files-panel')!;
     const startWidth = parseInt(filesPanel.style.width);
-    await fireEvent.mouseDown(handle, { clientX: 200 });
+    await fireEvent.mouseDown(filesHandle, { clientX: 200 });
     await fireEvent.mouseMove(document, { clientX: 280 });
-    const after = parseInt(filesPanel.style.width);
-    expect(after).toBeGreaterThan(startWidth);
+    expect(parseInt(filesPanel.style.width)).toBeGreaterThan(startWidth);
     await fireEvent.mouseUp(document);
     // After mouseup, further mousemove should not change width
     const settled = parseInt(filesPanel.style.width);
     await fireEvent.mouseMove(document, { clientX: 500 });
     expect(parseInt(filesPanel.style.width)).toBe(settled);
+  });
+
+  it('drag on the commit-info handle widens that column only', async () => {
+    const { container } = render(CommitDetails, { commit: commit({ hash: 'h1' }) });
+    deliverCommitDiff('h1', [{ path: 'a.ts', status: 'M' }]);
+    const [infoHandle] = await handles(container);
+    const info = container.querySelector<HTMLDivElement>('.commit-tab-content')!;
+    const filesPanel = container.querySelector<HTMLDivElement>('.files-panel')!;
+    const startInfo = parseInt(info.style.width);
+    const startFiles = parseInt(filesPanel.style.width);
+    await fireEvent.mouseDown(infoHandle, { clientX: 300 });
+    await fireEvent.mouseMove(document, { clientX: 400 });
+    expect(parseInt(info.style.width)).toBeGreaterThan(startInfo);
+    expect(parseInt(filesPanel.style.width)).toBe(startFiles);
+    await fireEvent.mouseUp(document);
+  });
+
+  it('keeps the width when the component is re-created', async () => {
+    const first = render(CommitDetails, { commit: commit({ hash: 'h1' }) });
+    deliverCommitDiff('h1', [{ path: 'a.ts', status: 'M' }]);
+    const [infoHandle] = await handles(first.container);
+    await fireEvent.mouseDown(infoHandle, { clientX: 300 });
+    await fireEvent.mouseMove(document, { clientX: 420 });
+    const widened = parseInt(first.container.querySelector<HTMLDivElement>('.commit-tab-content')!.style.width);
+    await fireEvent.mouseUp(document);
+    cleanup();
+
+    const again = render(CommitDetails, { commit: commit({ hash: 'h2' }) });
+    const info = again.container.querySelector<HTMLDivElement>('.commit-tab-content')!;
+    expect(parseInt(info.style.width)).toBe(widened);
   });
 });
 

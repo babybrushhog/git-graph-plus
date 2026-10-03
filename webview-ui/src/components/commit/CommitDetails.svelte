@@ -7,6 +7,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { t } from '../../lib/i18n/index.svelte';
   import { avatarStore } from '../../lib/stores/avatars.svelte';
+  import { panelWidthsStore } from '../../lib/stores/panel-widths.svelte';
   import FileDiffView from './FileDiffView.svelte';
   import type { ReverseTarget } from './FileDiffView.svelte';
   import ContextMenu from '../common/ContextMenu.svelte';
@@ -178,7 +179,9 @@
   // passed to FileDiffView and the tree's "Reverse File" action.
   const canReverseInThisView = $derived(!!commit && stashIndex === null);
 
-  let filesPanelWidth = $state(240);
+  // Which column the current drag is resizing; see panelWidthsStore for why the
+  // widths are not component state.
+  let resizeTarget = $state<'commitInfo' | 'files'>('files');
   let isResizing = $state(false);
   let resizeStartX = 0;
   let resizeStartWidth = 0;
@@ -211,10 +214,11 @@
     return list.some(f => f.path === filePath && f.status === 'N');
   });
 
-  function startResize(e: MouseEvent) {
+  function startResize(e: MouseEvent, target: 'commitInfo' | 'files' = 'files') {
     isResizing = true;
+    resizeTarget = target;
     resizeStartX = e.clientX;
-    resizeStartWidth = filesPanelWidth;
+    resizeStartWidth = panelWidthsStore[target];
     document.addEventListener('mousemove', onResizeMove);
     document.addEventListener('mouseup', stopResize);
     document.body.style.userSelect = 'none';
@@ -224,7 +228,9 @@
   function onResizeMove(e: MouseEvent) {
     if (!isResizing) return;
     const delta = e.clientX - resizeStartX;
-    filesPanelWidth = Math.min(480, Math.max(120, resizeStartWidth + delta));
+    // The commit column may grow further: it holds the message, which wraps.
+    const [min, max] = resizeTarget === 'commitInfo' ? [200, 720] : [120, 480];
+    panelWidthsStore.set(resizeTarget, Math.min(max, Math.max(min, resizeStartWidth + delta)));
   }
 
   function stopResize() {
@@ -615,7 +621,7 @@
   <div class="details-body">
   <!-- Commit info (left column) -->
   {#if commit && commit.hash !== 'UNCOMMITTED'}
-    <div class="commit-tab-content">
+    <div class="commit-tab-content" style="width: {panelWidthsStore.commitInfo}px">
       <div class="info-section">
         <div class="info-columns">
           <!-- Author -->
@@ -783,11 +789,17 @@
     </div>
 
   <!-- Changes tab -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="resize-handle"
+      class:resizing={isResizing && resizeTarget === 'commitInfo'}
+      onmousedown={(e) => startResize(e, 'commitInfo')}
+    ></div>
   {/if}
 
   <!-- Changed files + diff (right column) -->
     <div class="changes-tab-content">
-      <div class="files-panel" style="width: {filesPanelWidth}px">
+      <div class="files-panel" style="width: {panelWidthsStore.files}px">
         <div class="files-list">
           {#if activeHash === 'UNCOMMITTED' && uncommittedFiles}
             {#snippet renderUncommittedTree(nodes: FileTreeNode[], depth: number, staged: boolean)}
@@ -1267,11 +1279,11 @@
     overflow: hidden;
   }
 
+  /* Width comes from panelWidthsStore (drag handle to the right of it). */
   .commit-tab-content {
-    flex: 0 0 var(--commit-info-width, 320px);
+    flex: 0 0 auto;
     overflow-y: auto;
     padding: 16px 20px;
-    border-right: 1px solid var(--border-color);
   }
 
   /* The two-column info block inside it has no room to sit side by side now. */
@@ -1608,6 +1620,7 @@
     overflow: hidden;
   }
 
+  /* Shared by both columns: left of the diff, and left of the file list. */
   .resize-handle {
     width: 4px;
     flex-shrink: 0;
